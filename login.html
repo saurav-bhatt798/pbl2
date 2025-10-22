@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Event Management System - Secure Login</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        /* ----------------------------------------------------------- */
+        /* BASE STYLES */
+        /* ----------------------------------------------------------- */
+        :root {
+            --primary-color: #00c6ff;
+            --dark-bg: #000;
+            --glass-alpha: 0.1;
+            --glass-border-alpha: 0.2;
+            --blur-radius: 8px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        body {
+            height: 100vh;
+            display: flex;
+            justify-content: flex-end; 
+            align-items: center;
+            background: var(--dark-bg);
+            overflow-x: hidden; 
+            overflow-y: auto; 
+        }
+
+        /* ----------------------------------------------------------- */
+        /* BACKGROUND VIDEO & OVERLAY */
+        /* ----------------------------------------------------------- */
+        .video-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -2;
+            overflow: hidden;
+        }
+
+        /* FIX: Use object-fit: cover for perfect aspect ratio and quality */
+        .video-bg video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover; 
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.4);
+            z-index: -1;
+        }
+
+        /* ----------------------------------------------------------- */
+        /* LOGIN CARD (The Glassmorphism Effect) */
+        /* ----------------------------------------------------------- */
+        .card {
+            position: relative;
+            right: 50px; 
+            width: 90%;
+            max-width: 400px;
+            
+            /* Glass properties */
+            background: rgba(255, 255, 255, var(--glass-alpha)); 
+            backdrop-filter: blur(var(--blur-radius));
+            border: 1px solid rgba(255, 255, 255, var(--glass-border-alpha)); 
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.6); 
+            
+            border-radius: 12px;
+            color: #fff;
+            z-index: 10;
+            opacity: 0; 
+            animation: fadeIn 0.8s ease-out forwards;
+        }
+
+        @keyframes fadeIn {
+            to { opacity: 1; }
+        }
+
+        .card-header {
+            background: rgba(0, 0, 0, 0.4);
+            padding: 25px 30px;
+            border-radius: 12px 12px 0 0;
+            text-align: center;
+        }
+        .card-header h1 { font-size: 28px; font-weight: 700; margin-bottom: 5px; }
+        .card-header p { font-size: 14px; color: rgba(255, 255, 255, 0.8); }
+
+        /* ----------------------------------------------------------- */
+        /* TABS */
+        /* ----------------------------------------------------------- */
+        .tabs { 
+            display: flex; 
+            text-align: center;
+            border-bottom: 1px solid rgba(255, 255, 255, var(--glass-border-alpha));
+            background: rgba(255, 255, 255, 0.05); 
+        }
+        .tab-item {
+            flex: 1;
+            padding: 15px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: rgba(255, 255, 255, 0.6);
+        }
+        .tab-item.active {
+            color: #fff;
+            border-bottom: 3px solid var(--primary-color);
+            background: rgba(255, 255, 255, var(--glass-alpha));
+        }
+
+        /* ----------------------------------------------------------- */
+        /* FORMS & INPUTS */
+        /* ----------------------------------------------------------- */
+        .form-content { padding: 30px; }
+        .form { display: none; }
+        .form.active { display: block; }
+
+        .input-group {
+            margin-bottom: 15px;
+            display: flex;
+            flex-direction: column;
+        }
+        .input-group label { font-size: 14px; margin-bottom: 5px; font-weight: 300; }
+        .input-group input {
+            padding: 12px 15px;
+            font-size: 16px;
+            background: rgba(0, 0, 0, 0.2);
+            color: white; 
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 6px;
+            transition: border-color 0.3s;
+        }
+        .input-group input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            background: rgba(0, 0, 0, 0.3);
+        }
+        .input-group input::placeholder { color: rgba(255, 255, 255, 0.5); }
+        
+        /* User Type Selector */
+        .user-selector { display: flex; gap: 10px; margin-bottom: 25px; }
+        .user-option {
+            flex: 1;
+            padding: 15px 10px;
+            text-align: center;
+            background: rgba(255, 255, 255, 0.1); 
+            border: 2px solid transparent; 
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 400;
+        }
+        .user-option i { display: block; font-size: 20px; margin-bottom: 5px; }
+        .user-option.selected {
+            background: rgba(0, 198, 255, 0.3);
+            border-color: var(--primary-color);
+            font-weight: 600;
+        }
+
+        /* Buttons & Links */
+        .btn {
+            width: 100%;
+            padding: 15px;
+            margin-top: 10px;
+            font-size: 17px;
+            background: var(--primary-color);
+            color: var(--dark-bg);
+            font-weight: 700; 
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.3s ease, transform 0.1s;
+        }
+        .btn:hover { background: #00a0d4; }
+        .btn:active { transform: scale(0.98); }
+
+        .forgot-link { text-align: right; margin-top: 10px; }
+        .forgot-link a { color: var(--primary-color); font-size: 14px; text-decoration: none; transition: color 0.3s; }
+        .forgot-link a:hover { color: #fff; text-decoration: underline; }
+        
+        .card-footer {
+            padding: 20px 30px;
+            font-size: 11px;
+            text-align: center;
+            color: rgba(255, 255, 255, 0.6);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 0 0 12px 12px;
+        }
+        .card-footer a { color: var(--primary-color); text-decoration: none; }
+
+        /* ----------------------------------------------------------- */
+        /* VIDEO CONTROLS */
+        /* ----------------------------------------------------------- */
+        .media-controls {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            z-index: 20;
+            display: flex;
+            gap: 10px;
+        }
+        .media-controls button {
+            background: rgba(0, 0, 0, 0.5);
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 50px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background 0.3s;
+        }
+        .media-controls button:hover { background: rgba(0, 0, 0, 0.7); }
+
+        /* ----------------------------------------------------------- */
+        /* RESPONSIVENESS (Mobile/Tablet) */
+        /* ----------------------------------------------------------- */
+        @media (max-width: 800px) {
+            body {
+                justify-content: center; /* Center login card horizontally */
+                align-items: flex-start; /* Start from the top vertically */
+            }
+            .card {
+                right: auto; 
+                margin-top: 40px;
+                margin-bottom: 40px; 
+                max-width: 90%;
+            }
+            .media-controls {
+                bottom: 10px;
+                left: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="video-bg">
+        <video id="background-video" autoplay loop playsinline> 
+            <source src="WhatsApp Video 2025-10-20 at 06.31.59_3dda37a9.mp4" type="video/mp4">
+            Your browser does not support the video tag.
+        </video>
+        <div class="overlay"></div> 
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h1>Event Management System</h1>
+            <p>Securely sign in to access your portal</p>
+        </div>
+
+        <div class="tabs">
+            <div class="tab-item active" data-tab="signin" onclick="switchTab('signin')">Sign In</div>
+            <div class="tab-item" data-tab="signup" onclick="switchTab('signup')">Sign Up</div>
+        </div>
+
+        <div class="form-content">
+            <div id="signin-form" class="form active">
+                <div class="user-selector">
+                    <div class="user-option selected" data-type="student" onclick="selectUser('signin', 'student')">
+                        <i class="fas fa-user-graduate"></i> Student
+                    </div>
+                    <div class="user-option" data-type="admin" onclick="selectUser('signin', 'admin')">
+                        <i class="fas fa-user-tie"></i> Admin
+                    </div>
+                </div>
+                
+                <div class="input-group">
+                    <label for="signin-email">Email Address</label>
+                    <input type="email" id="signin-email" placeholder="e.g., your.name@domain.com" required>
+                </div>
+                
+                <div class="input-group">
+                    <label for="signin-password">Password</label>
+                    <input type="password" id="signin-password" placeholder="Enter your password" required>
+                </div>
+                
+                <div class="input-group" id="signin-student-id-group" style="display: none;">
+                    <label for="signin-student-id">Student ID / Roll No.</label>
+                    <input type="text" id="signin-student-id" placeholder="Your student ID" required>
+                </div>
+                
+                <div class="forgot-link">
+                    <a href="#">Forgot Password?</a>
+                </div>
+
+                <button class="btn" onclick="handleSignIn()">Sign In</button>
+            </div>
+
+            <div id="signup-form" class="form">
+                <div class="user-selector">
+                    <div class="user-option selected" data-type="student" onclick="selectUser('signup', 'student')">
+                        <i class="fas fa-user-graduate"></i> Student
+                    </div>
+                    <div class="user-option" data-type="admin" onclick="selectUser('signup', 'admin')">
+                        <i class="fas fa-user-tie"></i> Admin
+                    </div>
+                </div>
+                
+                <div class="input-group">
+                    <label for="signup-name">Full Name</label>
+                    <input type="text" id="signup-name" placeholder="Enter your full name" required>
+                </div>
+
+                <div class="input-group" id="signup-student-id-group">
+                    <label for="signup-student-id">Student ID / Roll No.</label>
+                    <input type="text" id="signup-student-id" placeholder="Your unique student ID (e.g., 2024CS001)" required>
+                </div>
+                
+                <div class="input-group">
+                    <label for="signup-email">Email Address</label>
+                    <input type="email" id="signup-email" placeholder="Enter your valid email" required>
+                </div>
+                
+                <div class="input-group">
+                    <label for="signup-password">Create Password</label>
+                    <input type="password" id="signup-password" placeholder="Min 8 characters" required>
+                </div>
+                
+                <div class="input-group">
+                    <label for="signup-confirm-password">Confirm Password</label>
+                    <input type="password" id="signup-confirm-password" placeholder="Repeat password" required>
+                </div>
+                
+                <button class="btn" onclick="handleSignUp()">Create Account</button>
+            </div>
+        </div>
+
+        <div class="card-footer">
+            By continuing, you agree to our <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a>
+        </div>
+    </div>
+
+    <div class="media-controls">
+        <button id="mute-btn" onclick="toggleMute()">
+            <i class="fas fa-volume-up"></i>
+        </button>
+        <button id="pause-btn" onclick="togglePlayPause()">
+            <i class="fas fa-pause"></i>
+        </button>
+    </div>
+
+    <script>
+        const video = document.getElementById('background-video');
+        const muteBtn = document.getElementById('mute-btn');
+        const pauseBtn = document.getElementById('pause-btn');
+
+        // Initial autoplay attempt
+        video.play().catch(e => {
+            console.warn("Autoplay failed (browser policy). Muting video.");
+            video.muted = true; 
+            muteBtn.innerHTML = '<i class="fas fa-volume-mute"></i>';
+        });
+
+        // Backend URL for connection
+        const API_URL = 'http://localhost:3000/api'; 
+
+        // Toggles the active tab between Sign In and Sign Up
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-item').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.form').forEach(form => form.classList.remove('active'));
+            
+            document.querySelector(`.tab-item[data-tab="${tabName}"]`).classList.add('active');
+            document.getElementById(`${tabName}-form`).classList.add('active');
+        }
+
+        // Toggles the user type selection (Student/Admin)
+        function selectUser(formId, type) {
+            document.querySelectorAll(`#${formId}-form .user-option`).forEach(option => option.classList.remove('selected'));
+            document.querySelector(`#${formId}-form .user-option[data-type="${type}"]`).classList.add('selected');
+
+            // Toggle Student ID field visibility based on role
+            const studentIdGroup = document.getElementById(`${formId}-student-id-group`);
+            if (studentIdGroup) { // Check if the element exists
+                studentIdGroup.style.display = (type === 'student') ? 'flex' : 'none';
+            }
+        }
+
+        // Initialize form display (run once on load)
+        document.addEventListener('DOMContentLoaded', () => {
+            selectUser('signin', 'student'); // Default to Student on Sign In
+            selectUser('signup', 'student'); // Default to Student on Sign Up
+        });
+        
+        function getSelectedUser(formId) {
+            return document.querySelector(`#${formId}-form .user-option.selected`).getAttribute('data-type');
+        }
+
+        // 🔑 Handles Sign In button click (REAL AUTHENTICATION)
+        async function handleSignIn() {
+            const email = document.getElementById('signin-email').value;
+            const password = document.getElementById('signin-password').value;
+            const role = getSelectedUser('signin');
+            
+            let studentId = '';
+            if (role === 'student') {
+                studentId = document.getElementById('signin-student-id').value;
+                if (!studentId) { alert('🚫 Student ID is required for student login.'); return; }
+            }
+            
+            if (!email || !password) {
+                alert('🚫 Please fill in both email/ID and password.');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_URL}/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        email, 
+                        password, 
+                        role,
+                        // Include studentId if role is student (server will handle which field to check)
+                        studentId: role === 'student' ? studentId : undefined
+                    }),
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    localStorage.setItem('authToken', data.token);
+                    alert(`✅ Login Successful! Redirecting to ${role} dashboard.`);
+                    
+                    if (role === 'admin') {
+                        window.location.href = '/admin/dashboard.html'; 
+                    } else {
+                        window.location.href = '/student/dashboard.html';
+                    }
+                } else {
+                    alert(`❌ Login Failed: ${data.message || 'Invalid credentials or role.'}`);
+                }
+            } catch (error) {
+                console.error('Error during sign-in:', error);
+                alert('Server connection failed. Please ensure the backend is running on port 3000.');
+            }
+        }
+
+
+        // 🔑 Handles Sign Up button click (FULLY WORKING REGISTRATION)
+        async function handleSignUp() {
+            const name = document.getElementById('signup-name').value;
+            const email = document.getElementById('signup-email').value;
+            const password = document.getElementById('signup-password').value;
+            const confirmPassword = document.getElementById('signup-confirm-password').value;
+            const role = getSelectedUser('signup');
+            
+            let studentId = '';
+            if (role === 'student') {
+                studentId = document.getElementById('signup-student-id').value;
+            }
+
+            if (!name || !email || !password || !confirmPassword || (role === 'student' && !studentId)) {
+                alert('🚫 Please fill in all required fields.');
+                return;
+            }
+            if (password.length < 8) {
+                alert('🚫 Password must be at least 8 characters.');
+                return;
+            }
+            if (password !== confirmPassword) {
+                alert('🚫 Passwords do not match.');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_URL}/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, email, password, role, studentId }),
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    alert(`🎉 Success! ${data.message}`);
+                    switchTab('signin'); 
+                } else {
+                    alert(`❌ Registration Failed: ${data.message || 'An unknown error occurred.'}`);
+                }
+
+            } catch (error) {
+                console.error('Error during sign-up:', error);
+                alert('Server connection failed. Please ensure the backend is running.');
+            }
+        }
+
+        // Toggles video sound
+        function toggleMute() {
+            video.muted = !video.muted;
+            muteBtn.innerHTML = video.muted 
+                ? '<i class="fas fa-volume-mute"></i>' 
+                : '<i class="fas fa-volume-up"></i>';
+        }
+
+        // Toggles video play/pause
+        function togglePlayPause() {
+            if (video.paused) {
+                video.play();
+                pauseBtn.innerHTML = '<i class="fas fa-pause"></i>';
+            } else {
+                video.pause();
+                pauseBtn.innerHTML = '<i class="fas fa-play"></i>';
+            }
+        }
+    </script>
+</body>
+</html>
